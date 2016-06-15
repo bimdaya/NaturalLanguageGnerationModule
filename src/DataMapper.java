@@ -236,9 +236,8 @@ public class DataMapper {
 				}
 
 			} else if (subject.contains(
-					CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "file_name")) ||
-			           subject.contains(CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH,
-			                                                                    "error_id"))) {
+					CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "file_name")) || subject.contains(
+					           CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "error_id"))) {
 				//if node is a name or an id of the root element set the object as the root name
 				rootName = object;
 				continue;
