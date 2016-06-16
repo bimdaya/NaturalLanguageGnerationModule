@@ -145,25 +145,6 @@ public class DataMapper {
 	}
 
 	/**
-	 * Split a given set of words by '_'
-	 *
-	 * @param phrase set of words
-	 * @return string
-	 */
-	private String splitWords(String phrase) {
-		String[] words = phrase.split(NLGConstants.UNDERSCORE);
-		StringBuilder stringBuilder = new StringBuilder();
-		stringBuilder.append(phrase);
-		if (words.length > 1) {
-			stringBuilder.delete(0, phrase.length());
-			for (String word : words) {
-				stringBuilder.append(word).append(NLGConstants.SPACE);
-			}
-		}
-		return stringBuilder.toString().trim();
-	}
-
-	/**
 	 * identify adjectives and set the relevant adverbs of a sentence
 	 *
 	 * @param dataBean data bean
@@ -211,8 +192,8 @@ public class DataMapper {
 			String object = nodes.item(i).getTextContent().toLowerCase();
 
 			DataBean dataBean = new DataBean();
-			subject = splitWords(subject);
-			object = splitWords(object);
+			subject = subject.replace(NLGConstants.UNDERSCORE, NLGConstants.SPACE);
+			object = object.replace(NLGConstants.UNDERSCORE, NLGConstants.SPACE);
 
 			String firstWordOfSubject = subject.split(NLGConstants.SPACE)[0];
 
