@@ -1,11 +1,10 @@
-import com.nlg.bean.DataBean;
-import com.nlg.common.NLGConstants;
+
+import com.nlg.dataHandler.ParagraphBean;
+import com.nlg.dataHandler.SentenceDataMapper;
 import com.nlg.common.NLGException;
 import com.nlg.simplenlg.SPhraseDescriptionGenerator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.util.List;
 
 /**
  * create the sentence paragraph to the xml
@@ -23,23 +22,21 @@ public class SentencePlanner {
 	 * @throws NLGException
 	 */
 	public String createAnswer(String xml) throws NLGException {
-		DataMapper dataMapper = new DataMapper(xml);
-		List<DataBean> dataBeanList = dataMapper.getDataBeanList();
-		String clauseType = dataMapper.getClauseType();
+		SentenceDataMapper sentenceDataMapper = new SentenceDataMapper(xml);
+		ParagraphBean paragraphBean = sentenceDataMapper.getNewParagraphBean();
 		SPhraseDescriptionGenerator sPhraseDescriptionGenerator = new SPhraseDescriptionGenerator();
 		Log log = LogFactory.getLog(SentencePlanner.class);
 
-		switch (clauseType) {
-			case NLGConstants.WHAT:
-			case NLGConstants.WHY:
-			case NLGConstants.WHERE:
-				return sPhraseDescriptionGenerator
-						.finalizeSentence(dataBeanList, dataMapper.getRootElement(), NLGConstants.WHAT,
-						                  dataMapper.getRootName());
-			case NLGConstants.HOW:
-				return sPhraseDescriptionGenerator.finalizeSentence(dataBeanList, "", NLGConstants.HOW, "");
+		switch (paragraphBean.getParagraphClauseType()) {
+			case HOW:
+				return sPhraseDescriptionGenerator.finalizeSentence(paragraphBean);
+			case WHAT:
+			case WHY:
+			case WHERE:
+				return sPhraseDescriptionGenerator.finalizeSentence(paragraphBean);
+
 			default:
-				String msg = "Invalid question type :  " + clauseType;
+				String msg = "Invalid question type :  " + paragraphBean.getParagraphClauseType();
 				log.error(msg);
 				throw new NLGException(msg);
 		}

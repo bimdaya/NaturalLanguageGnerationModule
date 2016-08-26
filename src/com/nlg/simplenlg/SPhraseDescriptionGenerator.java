@@ -2,11 +2,12 @@ package com.nlg.simplenlg;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.nlg.bean.DataBean;
+import com.nlg.common.ClauseEnum;
+import com.nlg.dataHandler.ParagraphBean;
 import com.nlg.common.CommonUtil;
 import com.nlg.common.NLGConstants;
 import com.nlg.common.NLGException;
-import com.nlg.wordnet.Stemmer;
+import com.nlg.wordnet.WordFormIdentifier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import simplenlg.features.Feature;
@@ -30,54 +31,48 @@ public class SPhraseDescriptionGenerator {
 	private static Realiser realiser = new Realiser();
 	private static Lexicon lexicon = Lexicon.getDefaultLexicon();
 	private static NLGFactory nlgFactory = new NLGFactory(lexicon);
-	private static Stemmer stemmer = Stemmer.getInstance();
-	private String rootElement = NLGConstants.NULL;
+	private static WordFormIdentifier wordFormIdentifier = WordFormIdentifier.getInstance();
+	private String rootElement;
 	private String rootElementName = NLGConstants.NULL;
 
 	/**
 	 * create sentence using modified SPhraseSpec list
 	 *
-	 * @param dataBeanList list of data beans
-	 * @param root         root element of the xml data
-	 * @param clauseType   question type
-	 * @param rootName     root element name
+	 * @param paragraphBean list of data beans
 	 * @return paragraph
 	 * @throws NLGException
 	 */
-	public String finalizeSentence(List<DataBean> dataBeanList, String root, String clauseType, String rootName)
-			throws NLGException {
-		if (dataBeanList.isEmpty()) {
-			String msg = "No data in the xml.";
+	public String finalizeSentence(ParagraphBean paragraphBean) throws NLGException {
+		if (paragraphBean == null) {
+			String msg = "Paragraph is not created";
 			log.error(msg);
 			throw new NLGException(msg);
 		}
 		StringBuilder stringBuffer = new StringBuilder();
-		if (!clauseType.equals(NLGConstants.HOW)) {
-			//map data beans with SPhraseSpecs except in HOW clause type
-			List<SPhraseSpec> sPhraseSpecList = setSPhraseList(dataBeanList);
+		List<SPhraseSpec> sentenceList = paragraphBean.getSentenceList();
+		if (!(paragraphBean.getParagraphClauseType() == ClauseEnum.HOW)) {
 
-			if (clauseType.equals(NLGConstants.WHAT)) {
-				if (Objects.equals(root, NLGConstants.NULL)) {
-					String msg = "Invalid xml content.";
-					log.error(msg);
-					throw new NLGException(msg);
-				}
-				//if clause type is WHAT set root element and pronouns
-				rootElement = root;
-				rootElementName = rootName;
-				sPhraseSpecList = setPronounsDeterminers(setConjunctions(sPhraseSpecList));
+			if (paragraphBean.getRootElement() == null) {
+				String msg = "Invalid xml content.";
+				log.error(msg);
+				throw new NLGException(msg);
 			}
 
+			//if clause type is WHAT set root element and pronouns
+			rootElement = paragraphBean.getRootElement();
+			rootElementName = paragraphBean.getRootElementName();
+			sentenceList = setPronounsDeterminers(setConjunctions(sentenceList));
+
 			//generate sentence
-			for (SPhraseSpec sPhraseSpec : sPhraseSpecList) {
+			for (SPhraseSpec sPhraseSpec : sentenceList) {
 				stringBuffer.append(realiser.realiseSentence(sPhraseSpec));
 			}
 		} else {
 			//if the clause type is HOW
 			stringBuffer.append("Followings are the steps to follow when fixing the error\n");
-			for (DataBean dataBean : dataBeanList) {
-				stringBuffer.append(dataBean.getSubject().trim()).append("\t Command : \"")
-				            .append(dataBean.getObject().trim()).append("\"\n");
+			for (SPhraseSpec sentence : sentenceList) {
+				stringBuffer.append(realiser.realise(sentence.getSubject()).toString().trim()).append("\t Command : \"")
+				            .append(realiser.realise(sentence.getObject()).toString().trim()).append("\"\n");
 			}
 		}
 		return stringBuffer.toString();
@@ -91,8 +86,8 @@ public class SPhraseDescriptionGenerator {
 	 */
 	private List<SPhraseSpec> setConjunctions(List<SPhraseSpec> sPhraseSpecList) throws NLGException {
 
-		ListMultimap<String, SPhraseSpec> duplicatesVerbPhraseMap = findDuplicatesVerbPhrase(sPhraseSpecList);
-		List<SPhraseSpec> newVerbPhraseList = new ArrayList<>();
+		ListMultimap<String, SPhraseSpec> duplicatesVerbPhraseMap = findDuplicateObject(sPhraseSpecList);
+		List<SPhraseSpec> newObjectList = new ArrayList<>();
 		List<SPhraseSpec> newSentenceList = new ArrayList<>();
 		String negativeForm = CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "negative");
 		duplicatesVerbPhraseMap.asMap().forEach((word, sPhraseSpec) -> {
@@ -119,15 +114,15 @@ public class SPhraseDescriptionGenerator {
 				});
 
 				phraseSpec.addComplement(coordinate);
-				newVerbPhraseList.add(phraseSpec);
+				newObjectList.add(phraseSpec);
 
 			} else {
-				newVerbPhraseList.add(duplicatesVerbPhraseMap.get(word).get(0));
+				newObjectList.add(duplicatesVerbPhraseMap.get(word).get(0));
 			}
 
 		});
 
-		ListMultimap<String, SPhraseSpec> duplicatesNounPhraseMap = findDuplicatesNounPhrase(newVerbPhraseList);
+		ListMultimap<String, SPhraseSpec> duplicatesNounPhraseMap = findDuplicatesNounPhrase(newObjectList);
 
 		duplicatesNounPhraseMap.asMap().forEach((word, sPhraseSpec) -> {
 
@@ -161,7 +156,7 @@ public class SPhraseDescriptionGenerator {
 	 * @param sPhraseSpecList list of SPhraseSpec
 	 * @return list of SPhraseSpec
 	 */
-	private ListMultimap<String, SPhraseSpec> findDuplicatesVerbPhrase(List<SPhraseSpec> sPhraseSpecList) {
+	private ListMultimap<String, SPhraseSpec> findDuplicateObject(List<SPhraseSpec> sPhraseSpecList) {
 
 		ListMultimap<String, SPhraseSpec> duplicates = ArrayListMultimap.create();
 
@@ -232,7 +227,6 @@ public class SPhraseDescriptionGenerator {
 	private List<SPhraseSpec> setPronounsDeterminers(List<SPhraseSpec> sPhraseSpecList) throws NLGException {
 		ListMultimap<Integer, SPhraseSpec> phraseSpecMap = setOrder(sPhraseSpecList);
 		List<SPhraseSpec> newList = new ArrayList<>();
-
 		Random random = new Random();
 		int randomCount;
 
@@ -249,8 +243,8 @@ public class SPhraseDescriptionGenerator {
 						randomCount = random.nextInt(4);
 						if (randomCount / 2 == 0) {
 							//set the pronoun as the subject
-							sPhraseSpec.setSubject(
-									stemmer.getPronoun(realiser.realise(sPhraseSpec.getSubject()).toString()));
+							sPhraseSpec.setSubject(wordFormIdentifier.getPronoun(
+									realiser.realise(sPhraseSpec.getSubject()).toString()));
 
 						} else {
 							//if 2 out of 3 phrases's pronouns are set, add definite article to the subject
@@ -303,53 +297,6 @@ public class SPhraseDescriptionGenerator {
 
 		}
 		return newList;
-	}
-
-	/**
-	 * map data bean list to SPhrase list
-	 *
-	 * @param dataBeanList data bean list
-	 * @return SPhraseSpec list
-	 * @throws NLGException
-	 */
-	public List<SPhraseSpec> setSPhraseList(List<DataBean> dataBeanList) throws NLGException {
-
-		List<SPhraseSpec> sPhraseSpecList = new ArrayList<>();
-
-		for (DataBean dataBean : dataBeanList) {
-			SPhraseSpec p = new SPhraseSpec(nlgFactory);
-			String[] subject = null;
-			String word = null;
-
-			if (dataBean.getSubject() != null) {
-
-				subject = dataBean.getSubject().split(NLGConstants.SPACE);
-				if (!(dataBean.getSubject().toLowerCase().contains(
-						CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "ora_error")) &&
-				      subject.length == 1))
-					//if the subject is not a single ora error
-					word = stemmer.stemWord(subject[subject.length - 1]);
-			}
-			p.setSubject(dataBean.getSubject());
-			p.setVerb(dataBean.getVerb());
-			p.setObject(dataBean.getObject());
-
-			if (dataBean.getNegation()) {
-				p.setNegated(true);
-			}
-
-			if (dataBean.isPassive()) {
-				p.setFeature(Feature.PASSIVE, true);
-			}
-
-			if ((subject != null && word != null)) {
-				if (!word.equals(subject[subject.length - 1]))
-					//if subject base form is plural, convert sentence to plural
-					p.setPlural(true);
-			}
-			sPhraseSpecList.add(p);
-		}
-		return sPhraseSpecList;
 	}
 
 }

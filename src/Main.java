@@ -4,7 +4,7 @@ public class Main {
 
 	public static void main(String[] args) throws NLGException {
 		String xml = "";
-		xml = "<question_type>WHAT</question_type>" +
+		/*xml = "<question_type>WHAT</question_type>" +
 		      "<error>" +
 		      "<error_id>ORA000001</error_id>" +
 		      "<is_fixable_by_the_system>false</is_fixable_by_the_system>" +
@@ -18,20 +18,20 @@ public class Main {
 		      "<error_description>the table or view does not exists</error_description>" +
 		      "<need_Oracle_support_to_fix>false</need_Oracle_support_to_fix>" +
 		      "<is_clear>false</is_clear>" +
-		      "</error>";
+		      "</error>";*/
 		/* xml= "<question_type>WHAT</question_type><file><file_name>listner.ora</file_name><located_in>/usr/local/ora" +
 		      "</located_in>" +
-		             "<description>checks whether the oracle db is up and running</description></file>" ;
+		             "<description>checks whether the oracle db is up and running</description></file>" ;*/
 
-		 xml =
+/*		 xml =
 		"<question_type>HOW</question_type><steps><commandDesc>Start listener, Stop " +
-		"listener</commandDesc><commands>lsnrctl start, lsnrctl stop</commands></steps>" ;
+		"listener</commandDesc><commands>lsnrctl start, lsnrctl stop</commands></steps>" ;*/
 
-		xml =
-				"<question_type>WHAT</question_type><error><error_id>ora-1234</error_id><caused_due_to>Table or view " +
+		/*xml =
+				"<question_type>WHY</question_type><error><error_id>ora-1234</error_id><caused_due_to>Table or view " +
 				"does not exists</caused_due_to>" +
-				"</error>" ;
-		xml = "<question_type>WHERE</question_type><file><file_name>ora-1234</file_name><located_in>/usr/document/" +
+				"</error>" ;*/
+		/*xml = "<question_type>WHERE</question_type><file><file_name>ora-1234</file_name><located_in>/usr/document/" +
 		      "</located_in></file>";*/
 		SentencePlanner sentencePlanner = new SentencePlanner();
 		try {
@@ -54,11 +54,11 @@ public class Main {
         int randomCount = random.nextInt(3);*//*
 
        System.out.println(realiser.realiseSentence(sPhraseSpec));*/
-		/*Stemmer stemmer = new Stemmer();
+		/*WordFormIdentifier stemmer = new WordFormIdentifier();
 		System.out.println(stemmer.getPronoun("table"));*/
-/*        Stemmer stemmer = null;
+/*        WordFormIdentifier stemmer = null;
         try {
-            stemmer = new Stemmer();
+            stemmer = new WordFormIdentifier();
             System.out.println(stemmer.getPronoun("place"));
         } catch (NLGException e) {
             e.printStackTrace();

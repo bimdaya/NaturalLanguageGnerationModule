@@ -25,9 +25,9 @@ import java.util.Properties;
  * @author NLG Module
  * @version 1.0.0
  */
-public class Stemmer {
-	static Log log = LogFactory.getLog(Stemmer.class);
-	private static volatile Stemmer instance;
+public class WordFormIdentifier {
+	static Log log = LogFactory.getLog(WordFormIdentifier.class);
+	private static volatile WordFormIdentifier instance;
 	private static Dictionary dictionary;
 	private static MorphologicalProcessor morphologicalProcessor;
 
@@ -50,11 +50,11 @@ public class Stemmer {
 
 	}
 
-	public static Stemmer getInstance() {
+	public static WordFormIdentifier getInstance() {
 		if (instance == null) {
-			synchronized (Stemmer.class) {
+			synchronized (WordFormIdentifier.class) {
 				if (instance == null)
-					instance = new Stemmer();
+					instance = new WordFormIdentifier();
 			}
 		}
 		return instance;
@@ -163,6 +163,7 @@ public class Stemmer {
 	public String convertToAdverb(String adjective) throws NLGException {
 		try {
 			adjective = adjective.toLowerCase();
+			//look for an adverb for the adjective
 			IndexWord indexWord = morphologicalProcessor.lookupBaseForm(POS.ADVERB, adjective);
 
 			if (indexWord != null) {
@@ -176,7 +177,7 @@ public class Stemmer {
 						adverb = word.getLemma();
 						//check if the synonym contains character sequence of the given adjective
 						if (adverb.contains(adjective.substring(0, adjective.length() - 2))) {
-							//check if the synonym contains 'ly' at the end
+							//check if the synonym contains 'y' at the end
 							if (adverb.contains(CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH,
 							                                                            "is_adverb")))
 								return adverb;
