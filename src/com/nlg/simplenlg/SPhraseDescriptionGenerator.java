@@ -4,15 +4,14 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.nlg.common.ClauseEnum;
 import com.nlg.dataHandler.ParagraphBean;
-import com.nlg.common.CommonUtil;
 import com.nlg.common.NLGConstants;
 import com.nlg.common.NLGException;
 import com.nlg.wordnet.WordFormIdentifier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import simplenlg.features.Feature;
-import simplenlg.framework.CoordinatedPhraseElement;
-import simplenlg.framework.NLGFactory;
+import simplenlg.features.Tense;
+import simplenlg.framework.*;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.phrasespec.NPPhraseSpec;
 import simplenlg.phrasespec.SPhraseSpec;
@@ -61,7 +60,9 @@ public class SPhraseDescriptionGenerator {
 			//if clause type is WHAT set root element and pronouns
 			rootElement = paragraphBean.getRootElement();
 			rootElementName = paragraphBean.getRootElementName();
-			sentenceList = setPronounsDeterminers(setConjunctions(sentenceList));
+			sentenceList = setObjectConjunctions(sentenceList);
+			sentenceList = setSubjectConjunctions(sentenceList);
+			sentenceList = setPronounsDeterminers(sentenceList);
 
 			//generate sentence
 			for (SPhraseSpec sPhraseSpec : sentenceList) {
@@ -81,73 +82,108 @@ public class SPhraseDescriptionGenerator {
 	/**
 	 * set the conjunctions of SPhraseSpec list
 	 *
-	 * @param sPhraseSpecList list of SPhraseSpec
+	 * @param currentSentenceList list of SPhraseSpec
 	 * @return list of SPhraseSpec
 	 */
-	private List<SPhraseSpec> setConjunctions(List<SPhraseSpec> sPhraseSpecList) throws NLGException {
+	private List<SPhraseSpec> setObjectConjunctions(List<SPhraseSpec> currentSentenceList) throws NLGException {
+		int currentSentenceSize = currentSentenceList.size();
 
-		ListMultimap<String, SPhraseSpec> duplicatesVerbPhraseMap = findDuplicateObject(sPhraseSpecList);
-		List<SPhraseSpec> newObjectList = new ArrayList<>();
-		List<SPhraseSpec> newSentenceList = new ArrayList<>();
-		String negativeForm = CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "negative");
-		duplicatesVerbPhraseMap.asMap().forEach((word, sPhraseSpec) -> {
+		if (currentSentenceSize > 1) {
+			int sentenceCount = 1;
+			for (int index = 0; index < currentSentenceSize; index++) {
+				SPhraseSpec currentSentence = currentSentenceList.get(index);
+				SPhraseSpec nextSentence = currentSentenceList.get(sentenceCount);
 
-			if (sPhraseSpec.size() > 1) {
-				//if there are more than one SPhraseSpecs with same subject and object
-				SPhraseSpec phraseSpec = new SPhraseSpec(nlgFactory);
-				CoordinatedPhraseElement coordinate = nlgFactory.createCoordinatedPhrase();
+				//get the subject and verb of the current sentence by replacing object with space in a sentence
+				String currentPhraseSpec = realiser.realiseSentence(currentSentence)
+				                                   .replace(realiser.realise(currentSentence.getObject()).toString(),
+				                                            NLGConstants.SPACE).trim();
+				String nextPhraseSpec = realiser.realiseSentence(nextSentence)
+				                                .replace(realiser.realise(nextSentence.getObject()).toString(),
+				                                         NLGConstants.SPACE).trim();
+				if (index == sentenceCount) {
+					continue;
+				}
+				if (currentPhraseSpec.equals(nextPhraseSpec)) {
+					//if current and next subject+verb are equal combine objects using 'and'
+					SPhraseSpec newSentence = new SPhraseSpec(nlgFactory);
+					CoordinatedPhraseElement coordinate = nlgFactory.createCoordinatedPhrase();
+					newSentence.setSubject(currentSentence.getSubject());
+					newSentence.setVerb(currentSentence.getVerb());
 
-				//create a new phrase joining objects
-				sPhraseSpec.forEach(duplicate -> {
-					phraseSpec.setSubject(duplicate.getSubject());
-					phraseSpec.setVerb(duplicate.getVerb());
-					int count = 0;
-					if (duplicate.isNegated()) {
-						duplicate.setNegated(true);
-						count++;
-						if (count != 0) {
-							coordinate.addCoordinate(
-									negativeForm + NLGConstants.SPACE + realiser.realise(duplicate.getObject()));
-						}
-					} else
-						coordinate.addCoordinate(duplicate.getObject());
-				});
+					if (currentSentence.isNegated()) {
+						newSentence.setNegated(true);
+					}
+					coordinate.addCoordinate(currentSentence.getObject());
+					coordinate.addCoordinate(nextSentence.getObject());
+					newSentence.setObject(coordinate);
+					currentSentenceList.remove(--sentenceCount);
+					currentSentenceList.set(sentenceCount, newSentence);
+					realiser.realiseSentence(newSentence);
+					sentenceCount++;
+				}
+				sentenceCount++;
 
-				phraseSpec.addComplement(coordinate);
-				newObjectList.add(phraseSpec);
-
-			} else {
-				newObjectList.add(duplicatesVerbPhraseMap.get(word).get(0));
+				if (sentenceCount < index || sentenceCount >= currentSentenceSize - 1) {
+					break;
+				}
 			}
+		}
+		return currentSentenceList;
+	}
 
-		});
+	/**
+	 * set the conjunctions of SPhraseSpec list
+	 *
+	 * @param currentSentenceList list of SPhraseSpec
+	 * @return list of SPhraseSpec
+	 */
+	private List<SPhraseSpec> setSubjectConjunctions(List<SPhraseSpec> currentSentenceList) throws NLGException {
+		int currentSentenceSize = currentSentenceList.size();
 
-		ListMultimap<String, SPhraseSpec> duplicatesNounPhraseMap = findDuplicatesNounPhrase(newObjectList);
+		if (currentSentenceSize > 1) {
+			int sentenceCount = 1;
+			for (int index = 0; index < currentSentenceSize; index++) {
+				SPhraseSpec currentSentence = currentSentenceList.get(index);
+				SPhraseSpec nextSentence = currentSentenceList.get(sentenceCount);
 
-		duplicatesNounPhraseMap.asMap().forEach((word, sPhraseSpec) -> {
+				//get the verb + object of the current sentence by replacing object with space in a sentence
+				String currentPhraseSpec = realiser.realiseSentence(currentSentence)
+				                                   .replace(realiser.realise(currentSentence.getSubject()).toString(),
+				                                            NLGConstants.SPACE).trim();
+				String nextPhraseSpec = realiser.realiseSentence(nextSentence)
+				                                .replace(realiser.realise(nextSentence.getSubject()).toString(),
+				                                         NLGConstants.SPACE).trim();
+				if (index == sentenceCount) {
+					continue;
+				}
+				if (currentPhraseSpec.equals(nextPhraseSpec) && currentSentence.isNegated()==nextSentence.isNegated()) {
+					//if current and next verb+object are equal combine objects using 'and'
+					SPhraseSpec newSentence = new SPhraseSpec(nlgFactory);
+					CoordinatedPhraseElement coordinate = nlgFactory.createCoordinatedPhrase();
+					newSentence.setObject(currentSentence.getSubject());
+					newSentence.setVerb(currentSentence.getVerb());
 
-			if (sPhraseSpec.size() > 1) {
-				//if there are more than one SPhraseSpecs with same verb and object
-				SPhraseSpec phraseSpec = new SPhraseSpec(nlgFactory);
-				CoordinatedPhraseElement coordinate = nlgFactory.createCoordinatedPhrase();
+					if (currentSentence.isNegated()) {
+						newSentence.setNegated(true);
+					}
+					coordinate.addCoordinate(currentSentence.getSubject());
+					coordinate.addCoordinate(nextSentence.getSubject());
+					newSentence.setSubject(coordinate);
+					newSentence.setPlural(true);
+					currentSentenceList.remove(--sentenceCount);
+					currentSentenceList.set(sentenceCount, newSentence);
+					realiser.realiseSentence(newSentence);
+					sentenceCount++;
+				}
+				sentenceCount++;
 
-				//create a new phrase joining subjects
-				sPhraseSpec.forEach(duplicate -> {
-					coordinate.addCoordinate(duplicate.getSubject());
-					phraseSpec.setVerb(duplicate.getVerb());
-					phraseSpec.setObject(duplicate.getObject());
-				});
-
-				phraseSpec.setSubject(coordinate);
-				newSentenceList.add(phraseSpec);
-
-			} else {
-				newSentenceList.add(duplicatesNounPhraseMap.get(word).get(0));
+				if (sentenceCount < index || sentenceCount >= currentSentenceSize - 1) {
+					break;
+				}
 			}
-
-		});
-		return newSentenceList;
-
+		}
+		return currentSentenceList;
 	}
 
 	/**
@@ -161,9 +197,10 @@ public class SPhraseDescriptionGenerator {
 		ListMultimap<String, SPhraseSpec> duplicates = ArrayListMultimap.create();
 
 		for (SPhraseSpec sPhraseSpec : sPhraseSpecList) {
-
+			//get the subject and verb of the current sentence by replacing object with space in a sentence
 			String wordSet = realiser.realiseSentence(sPhraseSpec)
-			                         .replace(realiser.realise(sPhraseSpec.getObject()).toString(), NLGConstants.SPACE);
+			                         .replace(realiser.realise(sPhraseSpec.getObject()).toString(), NLGConstants.SPACE)
+			                         .trim();
 
 			//multi map itself add values to a list according to the key
 			duplicates.put(wordSet, sPhraseSpec);
@@ -225,78 +262,43 @@ public class SPhraseDescriptionGenerator {
 	 * @throws NLGException
 	 */
 	private List<SPhraseSpec> setPronounsDeterminers(List<SPhraseSpec> sPhraseSpecList) throws NLGException {
-		ListMultimap<Integer, SPhraseSpec> phraseSpecMap = setOrder(sPhraseSpecList);
-		List<SPhraseSpec> newList = new ArrayList<>();
-		Random random = new Random();
-		int randomCount;
+		int currentSentenceSize = sPhraseSpecList.size();
+		ArrayList<SPhraseSpec> newSentenceList = new ArrayList<>();
+		if (currentSentenceSize > 1) {
 
-		if (sPhraseSpecList.size() == 0) {
-			String msg = "Error while retrieving SPhrase list.";
-			log.error(msg);
-			throw new NLGException(msg);
+			int previousSentenceIndex = 0;
+			for (int currentIndex = 0; currentIndex < currentSentenceSize; currentIndex++) {
+				SPhraseSpec currentSentence = sPhraseSpecList.get(currentIndex);
+				SPhraseSpec previousSentence = sPhraseSpecList.get(previousSentenceIndex);
 
-		} else {
-			List<SPhraseSpec> oldList = phraseSpecMap.get(1);
-			if (oldList.size() > 0) {
-				for (SPhraseSpec sPhraseSpec : oldList) {
-					if (!sPhraseSpec.equals(oldList.get(0))) {
-						randomCount = random.nextInt(4);
-						if (randomCount / 2 == 0) {
-							//set the pronoun as the subject
-							sPhraseSpec.setSubject(wordFormIdentifier.getPronoun(
-									realiser.realise(sPhraseSpec.getSubject()).toString()));
+				//get the subject and verb of the current sentence by replacing object with space in a sentence
+				String currentPhraseSpec = realiser.realise(currentSentence.getSubject()).toString();
+				String previousPhraseSpec = realiser.realise(previousSentence.getSubject()).toString();
 
-						} else {
-							//if 2 out of 3 phrases's pronouns are set, add definite article to the subject
-							NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
-							subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
-							subject.setComplement(sPhraseSpec.getSubject());
-							sPhraseSpec.setSubject(realiser.realise(subject));
-						}
-					} else {
-						sPhraseSpec.setSubject(rootElementName);
-					}
-					newList.add(sPhraseSpec);
+				if (currentIndex == 0) {
+					if (!currentSentence.isPlural() && rootElementName != null)
+						currentSentence.setSubject(rootElementName);
+					newSentenceList.add(currentSentence);
+					continue;
+				} else if (realiser.realise(currentSentence.getSubject()).equals(rootElement)) {
+					//if current sentence's subject is root element set the pronoun of the root element
+					currentSentence.setSubject(
+							wordFormIdentifier.getPronoun(realiser.realise(currentSentence.getSubject()).toString()));
+				} else if (currentPhraseSpec.equals(previousPhraseSpec)) {
+					//if current sentence subject and previous sentence subject are equal set determiners
+					// for current subject
+					NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
+					subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
+					subject.setComplement(currentSentence.getSubject());
+					currentSentence.setSubject(realiser.realise(subject));
 				}
-			}
-			oldList = phraseSpecMap.get(2);
-			if (oldList.size() > 0) {
-				oldList.forEach((sPhraseSpec) -> {
-					if (!(newList.size() == 0)) {
-						//if the phrase is not the first sentence in the paragraph add definite article to subject
-						NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
-						subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
-						subject.setComplement(sPhraseSpec.getSubject());
-						sPhraseSpec.setSubject(subject);
-					}
-					newList.add(sPhraseSpec);
-				});
-			}
-			oldList = phraseSpecMap.get(3);
-			if (oldList.size() > 0) {
-				oldList.forEach((sPhraseSpec) -> {
-					if (!(sPhraseSpec.equals(phraseSpecMap.get(3).get(0)) && (newList.size() == 0))) {
-						//if the phrase is not the first phrase of the paragraph and root element is defined before
-						NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
-						subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
-						subject.setComplement(rootElement);
-						//add definite article to the root element
-						sPhraseSpec.setObject(realiser.realise(sPhraseSpec.getObject()).toString()
-						                              .replaceAll(rootElement, realiser.realise(subject).toString()));
-					}
-					newList.add(sPhraseSpec);
-				});
-			}
-			oldList = phraseSpecMap.get(4);
-			if (oldList.size() > 0) {
-				rootElement = realiser.realise(oldList.get(0).getSubject()).toString();
-				rootElementName = rootElement;
-				//do the same recursively for the new root element
-				setPronounsDeterminers(oldList).forEach(newList::add);
-			}
+				previousSentenceIndex++;
+				newSentenceList.add(currentSentence);
 
+			}
 		}
-		return newList;
+		return newSentenceList;
+
 	}
 
 }

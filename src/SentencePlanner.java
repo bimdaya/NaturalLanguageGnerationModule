@@ -5,6 +5,7 @@ import com.nlg.common.NLGException;
 import com.nlg.simplenlg.SPhraseDescriptionGenerator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import simplenlg.realiser.english.Realiser;
 
 /**
  * create the sentence paragraph to the xml

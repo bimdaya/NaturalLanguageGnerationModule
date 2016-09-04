@@ -208,6 +208,10 @@ public class WordFormIdentifier {
 			IndexWord indexWord = dictionary.lookupIndexWord(POS.NOUN, word);
 
 			if (indexWord != null) {
+				if(!stemWord(word).equals(word)){
+					return CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "plural_adverb");
+				}
+
 				//if the given word is a noun get all the synonym details from wordnet
 				Synset[] synsets = indexWord.getSenses();
 

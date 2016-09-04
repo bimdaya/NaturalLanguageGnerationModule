@@ -4,7 +4,7 @@ public class Main {
 
 	public static void main(String[] args) throws NLGException {
 		String xml = "";
-		/*xml = "<question_type>WHAT</question_type>" +
+		xml = "<question_type>WHAT</question_type>" +
 		      "<error>" +
 		      "<error_id>ORA000001</error_id>" +
 		      "<is_fixable_by_the_system>false</is_fixable_by_the_system>" +
@@ -13,12 +13,12 @@ public class Main {
 		      "</caused_due_to>" +
 		      "<severity_level>minor</severity_level>" +
 		      "<ran>quick</ran>" +
+		      "<error_description>the table or view does not exists</error_description>" +
 		      "<ran>quiet</ran>" +
 		      "<ran>slow</ran>" +
-		      "<error_description>the table or view does not exists</error_description>" +
 		      "<need_Oracle_support_to_fix>false</need_Oracle_support_to_fix>" +
 		      "<is_clear>false</is_clear>" +
-		      "</error>";*/
+		      "</error>";
 		/* xml= "<question_type>WHAT</question_type><file><file_name>listner.ora</file_name><located_in>/usr/local/ora" +
 		      "</located_in>" +
 		             "<description>checks whether the oracle db is up and running</description></file>" ;*/

@@ -1,9 +1,7 @@
 package com.nlg.dataHandler;
 
-import com.nlg.common.ClauseEnum;
-import com.nlg.common.CommonUtil;
-import com.nlg.common.NLGConstants;
-import com.nlg.common.NLGException;
+import com.nlg.common.*;
+import com.nlg.simplenlg.TenseChecker;
 import com.nlg.wordnet.WordFormIdentifier;
 import com.sun.org.apache.xerces.internal.parsers.DOMParser;
 import org.apache.commons.logging.Log;
@@ -13,9 +11,11 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import simplenlg.features.Feature;
 import simplenlg.framework.NLGFactory;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.phrasespec.SPhraseSpec;
+import simplenlg.realiser.english.Realiser;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +33,7 @@ public class SentenceDataMapper {
 	private static WordFormIdentifier wordFormIdentifier = WordFormIdentifier.getInstance();
 	private static Lexicon lexicon = Lexicon.getDefaultLexicon();
 	private static NLGFactory nlgFactory = new NLGFactory(lexicon);
+	private static boolean isRootPlural = false;
 
 	public SentenceDataMapper(String xmlData) throws NLGException {
 		init(xmlData);
@@ -55,6 +56,7 @@ public class SentenceDataMapper {
 
 		xmlData = xmlData.substring(length + closingTag.length());
 
+		WordFormIdentifier wordFormIdentifier = new WordFormIdentifier();
 		DOMParser parser = new DOMParser();
 		try {
 			parser.parse(new InputSource(new java.io.StringReader(xmlData)));
@@ -62,6 +64,9 @@ public class SentenceDataMapper {
 
 			Element element = document.getDocumentElement();
 			String rootElement = element.getNodeName().toLowerCase();
+			if (!wordFormIdentifier.stemWord(rootElement).equals(rootElement)) {
+				isRootPlural = true;
+			}
 
 			newParagraph = new ParagraphBean();
 			newParagraph.setRootElement(rootElement);
@@ -129,12 +134,14 @@ public class SentenceDataMapper {
 			subject = subject.replace(NLGConstants.UNDERSCORE, NLGConstants.SPACE);
 			object = object.replace(NLGConstants.UNDERSCORE, NLGConstants.SPACE);
 
-			String firstWordOfSubject = subject.split(NLGConstants.SPACE)[0];
+			String[] subjectWords = subject.split(NLGConstants.SPACE);
+			String firstWordOfSubject = subjectWords[0];
+			String lastWordOfSubject = subjectWords[subjectWords.length - 1];
 			String firstWordOfObject = object.split(NLGConstants.SPACE)[0];
 
+			TenseChecker tenseChecker = new TenseChecker();
 			if (subject.contains(
 					CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "error_description"))) {
-
 				//if the sentence is a description of something
 				if (wordFormIdentifier.isVerb(firstWordOfObject)) {
 
@@ -142,6 +149,7 @@ public class SentenceDataMapper {
 					sPhraseSpec.setSubject(newParagraph.getRootElement());
 					sPhraseSpec.setVerb(firstWordOfObject);
 					sPhraseSpec.setObject(object.substring(firstWordOfObject.length()));
+					sPhraseSpec.setFeature(Feature.TENSE, tenseChecker.getTense(firstWordOfObject));
 
 				} else {
 					//if the description does not contains a verb first set the verb as a BE verb
@@ -150,41 +158,68 @@ public class SentenceDataMapper {
 					sPhraseSpec.setVerb(CommonUtil.getInstance()
 					                              .loadProperties(NLGConstants.DATABEAN_FILE_PATH, "description_verb"));
 				}
+				if (isRootPlural) {
+					sPhraseSpec.setPlural(true);
+					sPhraseSpec.getSubject().setPlural(true);
+				}
 
 			} else if (subject.contains(
 					CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "file_name")) || subject.contains(
 					           CommonUtil.getInstance().loadProperties(NLGConstants.DATABEAN_FILE_PATH, "error_id"))) {
 				//if node is a name or an id of the root element set the object as the root name
-				newParagraph.setRootElementName(object);
-				continue;
+				if (isRootPlural) {
+					sPhraseSpec.setSubject(subject);
+					sPhraseSpec.setVerb(NLGConstants.VERB_BE);
+					sPhraseSpec.setObject(object);
+					if (!lastWordOfSubject.equals(wordFormIdentifier.stemWord(lastWordOfSubject))) {
+						sPhraseSpec.getSubject().setPlural(true);
+						sPhraseSpec.setPlural(true);
+					}
+				} else {
+					newParagraph.setRootElementName(object);
+					continue;
+				}
 			} else if (wordFormIdentifier.isVerb(firstWordOfSubject.toLowerCase())) {
 				if (object.toLowerCase().equals(NLGConstants.TRUE)) {
 					//if object is true get the subject without verb and set as object
 					sPhraseSpec.setSubject(newParagraph.getRootElement());
 					sPhraseSpec.setObject(subject.substring(firstWordOfSubject.length(), subject.length()));
 					sPhraseSpec.setVerb(firstWordOfSubject);
+					sPhraseSpec.setFeature(Feature.TENSE, tenseChecker.getTense(firstWordOfSubject));
 				} else if (object.toLowerCase().equals(NLGConstants.FALSE)) {
 					//if object is false get the subject without verb and set as object
 					sPhraseSpec.setSubject(newParagraph.getRootElement());
 					sPhraseSpec.setObject(subject.substring(firstWordOfSubject.length(), subject.length()));
 					sPhraseSpec.setVerb(firstWordOfSubject);
+					sPhraseSpec.setFeature(Feature.TENSE, tenseChecker.getTense(firstWordOfSubject));
 					sPhraseSpec.setNegated(true);
 				} else if (wordFormIdentifier.isAdverb(firstWordOfObject)) {
 					sPhraseSpec.setSubject(newParagraph.getRootElement());
 					sPhraseSpec.setVerb(subject);
 					sPhraseSpec.setObject(
 							object.replace(firstWordOfObject, wordFormIdentifier.convertToAdverb(firstWordOfObject)));
+					sPhraseSpec.setFeature(Feature.TENSE, tenseChecker.getTense(firstWordOfSubject));
 				} else {
 					sPhraseSpec.setSubject(newParagraph.getRootElement());
 					sPhraseSpec.setObject(object);
 					sPhraseSpec.setVerb(subject);
+					sPhraseSpec.setFeature(Feature.TENSE, tenseChecker.getTense(firstWordOfSubject));
+				}
+				if (isRootPlural) {
+					sPhraseSpec.setPlural(true);
+					sPhraseSpec.getSubject().setPlural(true);
 				}
 			} else if (wordFormIdentifier.isNoun(firstWordOfSubject.toLowerCase())) {
 				//if the node does not contain a verb, set the verb in 'be' form
 				sPhraseSpec.setSubject(subject);
 				sPhraseSpec.setVerb(NLGConstants.VERB_BE);
 				sPhraseSpec.setObject(object);
+				if (!lastWordOfSubject.equals(wordFormIdentifier.stemWord(lastWordOfSubject))) {
+					sPhraseSpec.getSubject().setPlural(true);
+					sPhraseSpec.setPlural(true);
+				}
 			}
+
 			sentenceList.add(sPhraseSpec);
 		}
 		newParagraph.setSentenceList(sentenceList);

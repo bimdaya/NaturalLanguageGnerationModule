@@ -12,6 +12,7 @@ public class NLGConstants {
 	public static final String TRUE = "true";
 	public static final String FALSE = "false";
 	public static final String VERB_BE = "be";
+	public static final String VERB_BE_SINGULAR = "is";
 	public static final String SPACE = " ";
 	public static final String COMMA = ",";
 	public static final String UNDERSCORE = "_";
