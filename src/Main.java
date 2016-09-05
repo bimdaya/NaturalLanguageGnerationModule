@@ -6,7 +6,7 @@ public class Main {
 		String xml = "";
 		xml = "<question_type>WHAT</question_type>" +
 		      "<error>" +
-		      "<error_id>ORA000001</error_id>" +
+		      "<error_id>ORA-000001</error_id>" +
 		      "<is_fixable_by_the_system>false</is_fixable_by_the_system>" +
 		      "<caused_due_to>Table owner name not specified when logged-in as a non-creator of the table, " +
 		      "ORA-00942 on table import (imp or impdp), ORA-00942 on materialized view refresh" +

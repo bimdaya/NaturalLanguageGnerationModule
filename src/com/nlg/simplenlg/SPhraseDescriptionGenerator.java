@@ -61,7 +61,7 @@ public class SPhraseDescriptionGenerator {
 			rootElement = paragraphBean.getRootElement();
 			rootElementName = paragraphBean.getRootElementName();
 			sentenceList = setObjectConjunctions(sentenceList);
-			sentenceList = setSubjectConjunctions(sentenceList);
+			//sentenceList = setSubjectConjunctions(sentenceList);
 			sentenceList = setPronounsDeterminers(sentenceList);
 
 			//generate sentence
@@ -157,7 +157,8 @@ public class SPhraseDescriptionGenerator {
 				if (index == sentenceCount) {
 					continue;
 				}
-				if (currentPhraseSpec.equals(nextPhraseSpec) && currentSentence.isNegated()==nextSentence.isNegated()) {
+				if (currentPhraseSpec.equals(nextPhraseSpec) &&
+				    currentSentence.isNegated() == nextSentence.isNegated()) {
 					//if current and next verb+object are equal combine objects using 'and'
 					SPhraseSpec newSentence = new SPhraseSpec(nlgFactory);
 					CoordinatedPhraseElement coordinate = nlgFactory.createCoordinatedPhrase();
@@ -187,74 +188,6 @@ public class SPhraseDescriptionGenerator {
 	}
 
 	/**
-	 * find if there are duplicate verbs and objects
-	 *
-	 * @param sPhraseSpecList list of SPhraseSpec
-	 * @return list of SPhraseSpec
-	 */
-	private ListMultimap<String, SPhraseSpec> findDuplicateObject(List<SPhraseSpec> sPhraseSpecList) {
-
-		ListMultimap<String, SPhraseSpec> duplicates = ArrayListMultimap.create();
-
-		for (SPhraseSpec sPhraseSpec : sPhraseSpecList) {
-			//get the subject and verb of the current sentence by replacing object with space in a sentence
-			String wordSet = realiser.realiseSentence(sPhraseSpec)
-			                         .replace(realiser.realise(sPhraseSpec.getObject()).toString(), NLGConstants.SPACE)
-			                         .trim();
-
-			//multi map itself add values to a list according to the key
-			duplicates.put(wordSet, sPhraseSpec);
-
-		}
-		return duplicates;
-	}
-
-	/**
-	 * find if there are duplicate verbs and subjects
-	 *
-	 * @param sPhraseSpecList list of SPhraseSpec
-	 * @return list of SPhraseSpec
-	 */
-	private ListMultimap<String, SPhraseSpec> findDuplicatesNounPhrase(List<SPhraseSpec> sPhraseSpecList) {
-
-		ListMultimap<String, SPhraseSpec> duplicates = ArrayListMultimap.create();
-
-		for (SPhraseSpec sPhraseSpec : sPhraseSpecList) {
-			String wordSet = realiser.realiseSentence(sPhraseSpec)
-			                         .substring(realiser.realise(sPhraseSpec.getSubject()).toString().length()).trim();
-			//multi map itself add values to a list according to the key
-			duplicates.put(wordSet, sPhraseSpec);
-
-		}
-		return duplicates;
-	}
-
-	/**
-	 * put SPhraseSpecs according to an order
-	 *
-	 * @param sPhraseSpecList list of SPhraseSpec
-	 * @return list of SPhraseSpec
-	 */
-	private ListMultimap<Integer, SPhraseSpec> setOrder(List<SPhraseSpec> sPhraseSpecList) {
-		ListMultimap<Integer, SPhraseSpec> orderMap = ArrayListMultimap.create();
-		sPhraseSpecList.forEach(item -> {
-			if (realiser.realise(item.getSubject()).toString().equals(rootElement)) {
-				//if subject equals to root element
-				orderMap.put(1, item);
-			} else if (realiser.realise(item.getSubject()).toString().contains(rootElement)) {
-				//if subject has root element
-				orderMap.put(2, item);
-			} else if (realiser.realise(item.getObject()).toString().contains(rootElement)) {
-				//if object contains root element
-				orderMap.put(3, item);
-			} else {
-				orderMap.put(4, item);
-			}
-		});
-		return orderMap;
-	}
-
-	/**
 	 * set the pronouns and determiners of a sentence
 	 *
 	 * @param sPhraseSpecList list of SPhraseSpec
@@ -280,18 +213,20 @@ public class SPhraseDescriptionGenerator {
 						currentSentence.setSubject(rootElementName);
 					newSentenceList.add(currentSentence);
 					continue;
-				} else if (realiser.realise(currentSentence.getSubject()).equals(rootElement)) {
-					//if current sentence's subject is root element set the pronoun of the root element
-					currentSentence.setSubject(
-							wordFormIdentifier.getPronoun(realiser.realise(currentSentence.getSubject()).toString()));
-				} else if (currentPhraseSpec.equals(previousPhraseSpec)) {
-					//if current sentence subject and previous sentence subject are equal set determiners
-					// for current subject
-					NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
-					subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
-					subject.setComplement(currentSentence.getSubject());
-					currentSentence.setSubject(realiser.realise(subject));
+				} else if (realiser.realise(currentSentence.getSubject()).equals(rootElement) ||
+				           (currentPhraseSpec.equals(previousPhraseSpec))) {
+					if (currentIndex % 2 == 1) {
+						//if current sentence's subject is root element set the pronoun of the root element
+						currentSentence.setSubject(wordFormIdentifier.getPronoun(
+								realiser.realise(currentSentence.getSubject()).toString()));
+					} else {
+						NPPhraseSpec subject = new NPPhraseSpec(nlgFactory);
+						subject.setDeterminer(NLGConstants.DETERMINER_DEFINITE_ARTICLE);
+						subject.setComplement(currentSentence.getSubject());
+						currentSentence.setSubject(realiser.realise(subject));
+					}
 				}
+
 				previousSentenceIndex++;
 				newSentenceList.add(currentSentence);
 
