@@ -11,8 +11,19 @@ import simplenlg.framework.WordElement;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.realiser.english.Realiser;
 
+/**
+ * Handles tasks of tense of a sentence
+ *
+ * @author NLG Module
+ * @version 1.0.0
+ */
 public class TenseChecker {
 
+	/*
+	* Returns tense(present/past/future) of the given verb
+	*
+	* @param verb verb
+	* */
 	public Tense getTense(String verb) throws NLGException {
 		String word = verb.split(NLGConstants.SPACE)[0];
 		WordFormIdentifier wordFormIdentifier = new WordFormIdentifier();
@@ -43,7 +54,6 @@ public class TenseChecker {
 			if(word.equals(tense) ){
 				return Tense.FUTURE;
 			}
-
 
 		}
 		return null;

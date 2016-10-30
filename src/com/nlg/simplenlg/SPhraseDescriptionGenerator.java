@@ -1,23 +1,21 @@
 package com.nlg.simplenlg;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import com.nlg.common.ClauseEnum;
-import com.nlg.dataHandler.ParagraphBean;
 import com.nlg.common.NLGConstants;
 import com.nlg.common.NLGException;
+import com.nlg.dataHandler.ParagraphBean;
 import com.nlg.wordnet.WordFormIdentifier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import simplenlg.features.Feature;
-import simplenlg.features.Tense;
-import simplenlg.framework.*;
+import simplenlg.framework.CoordinatedPhraseElement;
+import simplenlg.framework.NLGFactory;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.phrasespec.NPPhraseSpec;
 import simplenlg.phrasespec.SPhraseSpec;
 import simplenlg.realiser.english.Realiser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Handle grammar rules of sentences

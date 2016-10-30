@@ -55,8 +55,8 @@ public class Main {
 
        System.out.println(realiser.realiseSentence(sPhraseSpec));*/
 		/*WordFormIdentifier stemmer = new WordFormIdentifier();
-		System.out.println(stemmer.getPronoun("table"));*/
-/*        WordFormIdentifier stemmer = null;
+		System.out.println(stemmer.getPronoun("table"));
+		WordFormIdentifier stemmer = null;
         try {
             stemmer = new WordFormIdentifier();
             System.out.println(stemmer.getPronoun("place"));

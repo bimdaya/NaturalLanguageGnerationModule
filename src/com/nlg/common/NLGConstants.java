@@ -21,7 +21,7 @@ public class NLGConstants {
 	public static final String DETERMINER_INDEFINITE_ARTICLE = "a";
 
 	//configuration file properties
-	public static final String PROPERTY_FILE_PATH = "NLGModule/src/resources/properties.xml";
+	public static final String PROPERTY_FILE_PATH = "/home/bimali/Documents/NLGModule/NLGModule/src/resources/properties.xml";
 	public static final String PRONOUN_FILE_PATH = "resources/pronoun.properties";
 	public static final String DATABEAN_FILE_PATH = "resources/dataBean.properties";
 

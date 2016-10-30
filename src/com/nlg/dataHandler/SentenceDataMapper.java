@@ -1,6 +1,9 @@
 package com.nlg.dataHandler;
 
-import com.nlg.common.*;
+import com.nlg.common.ClauseEnum;
+import com.nlg.common.CommonUtil;
+import com.nlg.common.NLGConstants;
+import com.nlg.common.NLGException;
 import com.nlg.simplenlg.TenseChecker;
 import com.nlg.wordnet.WordFormIdentifier;
 import com.sun.org.apache.xerces.internal.parsers.DOMParser;
@@ -15,7 +18,6 @@ import simplenlg.features.Feature;
 import simplenlg.framework.NLGFactory;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.phrasespec.SPhraseSpec;
-import simplenlg.realiser.english.Realiser;
 
 import java.io.IOException;
 import java.util.ArrayList;
