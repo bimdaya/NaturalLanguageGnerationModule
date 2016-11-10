@@ -59,7 +59,7 @@ public class SPhraseDescriptionGenerator {
 			rootElement = paragraphBean.getRootElement();
 			rootElementName = paragraphBean.getRootElementName();
 			sentenceList = setObjectConjunctions(sentenceList);
-			//sentenceList = setSubjectConjunctions(sentenceList);
+			sentenceList = setSubjectConjunctions(sentenceList);
 			sentenceList = setPronounsDeterminers(sentenceList);
 
 			//generate sentence
